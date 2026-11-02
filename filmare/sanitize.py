@@ -24,7 +24,7 @@ STATUS = re.compile(r"(?<![\w.-])(\d{1,5}) (passed|failed)\b|\bBUILD (SUCCEEDED|
 # `cat clients.txt` or `npm test && cat clients.txt` cannot supply a number.
 RUNNER = re.compile(
     r"(?:\w+=\S*\s+)*(?:npx\s+)?(?:\S*/)?"
-    r"(?:check\.sh|vitest|jest|pytest|xcodebuild|xcb|gradlew?|cargo|deno|swift|tsc"
+    r"(?:check\.sh|vitest|jest|pytest|xcodebuild|xcb|gradlew?|tsc|swift\s+(?:test|build)|cargo\s+(?:test|build|check)|deno\s+(?:test|check)"
     r"|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test|python3?\s+-m\s+(?:unittest|pytest)|make\s+(?:test|check))(?![\w.-])"
 )
 QUIET_STEP = re.compile(r"cd\s+\S+|(?:export|unset)\s+\S+|set\s+[-+]\w+(?:\s+\w+)?|(?:tail|head)(?:\s+-\w+(?:\s+\d+)?)*")
@@ -72,9 +72,11 @@ def clip_text(text: str, limit: int) -> str:
 
 
 def reports_status(command: str) -> bool:
-    if re.search(r"\$\(|`|<\(", command):
+    # Anything else the shell could act on hides the status, whatever it would have done.
+    plain = command.replace("2>&1", " ")
+    if re.search(r"[$`<>()\\]|(?<!&)&(?!&)", plain):
         return False
-    steps = [step.strip() for step in re.split(r"&&|\|\||[;|\n]", command) if step.strip()]
+    steps = [step.strip() for step in re.split(r"&&|\|\||[;|\n]", plain) if step.strip()]
     return any(RUNNER.match(s) for s in steps) and all(RUNNER.match(s) or QUIET_STEP.fullmatch(s) for s in steps)
 
 
