@@ -233,7 +233,7 @@ class ReviewFixTests(unittest.TestCase):
         self.assertEqual(status_of("1234 passed verification", True, "cat data/clients.txt"), "[1 lines hidden]")
         self.assertEqual(status_of("1234 passed verification", True, "cat tests/clients.txt"), "[1 lines hidden]")
         for command in ("npm test && cat data/clients.txt", "npm test; cat x", "npm test $(cat x)", "npm test | cat",
-                        "npm run test2>&1", "npm test & cat x", "npm test > x", "npm test \\\n; cat x", "deno eval x", "swift run x", "cargo run"):
+                        "npm run test2>&1", "npm run test\u00a02>&1", "npm test\u00a0x", "npm test \"a;b\"", "npm test\f2>&1", "npm test & cat x", "npm test > x", "npm test \\\n; cat x", "deno eval x", "swift run x", "cargo run"):
             self.assertEqual(status_of("1234 passed", True, command), "[1 lines hidden]", command)
         for command in ("./check.sh", "cd web && npx vitest run", "DEVELOPER_DIR=/x scripts/xcb test", "python3 -m unittest",
                         "swift test 2>&1 | tail -5", "cargo test"):

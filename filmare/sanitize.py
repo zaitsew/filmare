@@ -72,9 +72,9 @@ def clip_text(text: str, limit: int) -> str:
 
 
 def reports_status(command: str) -> bool:
-    # Anything else the shell could act on hides the status, whatever it would have done.
-    plain = re.sub(r"(?<=\s)2>&1(?=\s|$)", " ", command)
-    if re.search(r"[$`<>()\\]|(?<!&)&(?!&)", plain):
+    # Only these plain characters count. Quoting, expansion, redirects and odd spaces all hide the status.
+    plain = re.sub(r"(?<=[ \t])2>&1(?=[ \t\n]|$)", " ", command)
+    if not re.fullmatch(r"[A-Za-z0-9_./=:@+,%~ \t\n;&|-]*", plain) or re.search(r"(?<!&)&(?!&)", plain):
         return False
     steps = [step.strip() for step in re.split(r"&&|\|\||[;|\n]", plain) if step.strip()]
     return any(RUNNER.match(s) for s in steps) and all(RUNNER.match(s) or QUIET_STEP.fullmatch(s) for s in steps)
