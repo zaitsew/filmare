@@ -1,0 +1,30 @@
+#!/bin/sh
+# teyla leak gate (pre-commit): written by `teyla leak install`; rerun it instead of editing
+# >>> teyla leak gate (pre-commit) -- written by `teyla leak install`; `teyla leak install --uninstall` removes it
+_tlg_rc=0
+if [ "${TEYLA_LEAK:-1}" = "0" ]; then
+  _tlg_home="${TEYLA_HOME:-$HOME/.teyla}"
+  { mkdir -p "$_tlg_home" && printf '%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")" "pre-commit" >> "$_tlg_home/leak-skips.log"; } || {
+    echo "teyla leak gate: cannot record the skip in $_tlg_home/leak-skips.log; a skip that is not on record is not a skip" >&2
+    _tlg_rc=1
+  }
+elif ! command -v teyla >/dev/null 2>&1; then
+  echo "teyla leak gate: teyla not found; install it or set TEYLA_LEAK=0 for this command" >&2
+  _tlg_rc=2
+else
+  teyla leak --staged --quiet </dev/null >/dev/null 2>&1
+  _tlg_rc=$?
+  if [ "$_tlg_rc" -ne 0 ]; then
+    teyla leak --staged </dev/null >&2
+    echo "teyla leak gate: pre-commit refused (exit $_tlg_rc); fix the findings, or set TEYLA_LEAK=0 for this command" >&2
+  fi
+fi
+_tlg_legacy="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-commit"
+if [ "$_tlg_rc" -eq 0 ] && [ -z "${TEYLA_LEAK_CHAIN:-}" ] && [ -f "$_tlg_legacy" ] && [ -x "$_tlg_legacy" ] && ! [ "$_tlg_legacy" -ef "$0" ]; then
+  TEYLA_LEAK_CHAIN=1 "$_tlg_legacy" "$@" || _tlg_rc=$?
+fi
+if [ "$_tlg_rc" -ne 0 ]; then
+  exit "$_tlg_rc"
+fi
+unset _tlg_home _tlg_rc _tlg_remote _tlg_in _tlg_want _tlg_got _tlg_l _tlg_lsha _tlg_r _tlg_rsha _tlg_range _tlg_one _tlg_legacy
+# <<< teyla leak gate

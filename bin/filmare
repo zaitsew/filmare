@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Runs Filmare from its checkout, through whatever symlink setup.sh placed on the PATH.
+set -euo pipefail
+self="$0"
+while [ -L "$self" ]; do
+  target="$(readlink "$self")"
+  case "$target" in
+    /*) self="$target" ;;
+    *) self="$(dirname "$self")/$target" ;;
+  esac
+done
+root="$(cd "$(dirname "$self")/.." && pwd)"
+PYTHONPATH="$root" exec python3 -m filmare "$@"
