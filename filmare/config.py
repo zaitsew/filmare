@@ -19,6 +19,8 @@ DEFAULT_KEYS = frozenset({
 })
 ALWAYS_ALLOWED = frozenset({"true", "false", "none", "null"})
 NOT_A_NAME = re.compile(r"^[\d\s:./+-]+$")
+# Under these keys a bare number is the secret itself.
+NUMERIC_KEYS = frozenset({"booking", "confirmation", "phone", "pnr", "ref", "reference"})
 
 
 class ConfigError(Exception):
@@ -77,9 +79,9 @@ class Config:
         return found
 
 
-def add_private(value: str, found: set[str], allow: frozenset[str] = ALWAYS_ALLOWED) -> None:
+def add_private(value: str, found: set[str], allow: frozenset[str] = ALWAYS_ALLOWED, numeric: bool = False) -> None:
     value = value.strip()
-    if not 4 <= len(value) <= 120 or value.lower() in allow or NOT_A_NAME.match(value):
+    if not 4 <= len(value) <= 120 or value.lower() in allow or (NOT_A_NAME.match(value) and not numeric):
         return
     found.add(value)
     # "Calle Mayor 12, Valencia" also leaks as "Calle Mayor 12".
@@ -97,4 +99,6 @@ def harvest(node, found: set[str], keys: frozenset[str] = DEFAULT_KEYS,
         for v in node:
             harvest(v, found, keys, allow, key)
     elif isinstance(node, str) and key.lower() in keys:
-        add_private(node, found, allow)
+        add_private(node, found, allow, key.lower() in NUMERIC_KEYS)
+    elif isinstance(node, int) and not isinstance(node, bool) and key.lower() in NUMERIC_KEYS:
+        add_private(str(node), found, allow, True)

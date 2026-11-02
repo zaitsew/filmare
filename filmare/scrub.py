@@ -9,14 +9,16 @@ from collections import Counter
 _SENSITIVE = r"[\w-]*(?:token|secret|passw(?:or)?d|passphrase|api[_-]?key|apikey|access[_-]?key|private[_-]?key)[\w-]*"
 PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ("key", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)"), "[key]"),
-    ("token", re.compile(r"(?i)\bbearer\s+(?!\[)[\w.~+/=-]{6,}"), "Bearer [token]"),
+    ("credential", re.compile(r"""(?i)(\b(?:proxy-)?authorization\b["']?\s*[:=]\s*["']?)(?!\[)(?:\w+\s+)?(?!\[)[^\s"',;]+"""), r"\1[hidden]"),
+    ("token", re.compile(r"(?i)\b(bearer|basic)\s+(?!\[)[\w.~+/=-]{6,}"), r"\1 [token]"),
     ("token", re.compile(r"\beyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}"), "[token]"),
     ("token", re.compile(r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|xai|sbp|sb_secret|sb_publishable|github_pat|npm|hf|gsk)[-_][\w-]{12,}"), "[token]"),
     ("token", re.compile(r"\bAKIA[0-9A-Z]{16}\b|\bAIza[\w-]{35}"), "[token]"),
-    ("credential", re.compile(rf"(?i)(\b{_SENSITIVE}[\"']?\s*[:=]\s*[\"']?)(?!\[)[^\s\"',;]+"), r"\1[hidden]"),
-    ("credential", re.compile(r"(?i)(--?(?:password|passwd|pass|token|api-key|apikey|secret|auth)[= ]+)(?!\[)[^\s\"']+"), r"\1[hidden]"),
+    ("credential", re.compile(rf"""(?i)(\b{_SENSITIVE}["']?\s*[:=]\s*)(?!\[)(?:"[^"\n]*"|'[^'\n]*'|[^\s"',;]+)"""), r"\1[hidden]"),
+    ("credential", re.compile(r"""(?i)((?<![\w-])--?(?:password|passwd|pass|token|api-key|apikey|secret|auth)[= ]+)(?!\[)(?:"[^"\n]*"|'[^'\n]*'|[^\s"']+)"""), r"\1[hidden]"),
+    ("credential", re.compile(r"""((?<![\w-])(?:-u|--user)[= ]+)(?!\[)["']?[^\s"':]+:[^\s"']+["']?"""), r"\1[hidden]"),
     ("credential", re.compile(r"(https?://)[^/\s:@]+:[^/\s@]+@"), r"\1"),
-    ("email", re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]*\w"), "[email]"),
+    ("email", re.compile(r"[\w.+\[\]-]+@[\w-]+\.[\w.-]*\w"), "[email]"),
     ("phone", re.compile(r"(?<![\w.])\+\d[\d ()-]{7,}\d(?![\w.])"), "[number]"),
     ("phone", re.compile(r"(?<![\w.-])\d{3}[ -]\d{2,3}[ -]\d{2,3}(?:[ -]\d{2,3})?(?![\w.-])"), "[number]"),
     ("id", re.compile(r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"), "[id]"),
@@ -31,7 +33,12 @@ PASTED_TEXT = re.compile(r"<pasted_content\b[^>]*>[\s\S]*?</pasted_content\b[^>]
 
 
 def _phrase(value: str) -> str:
-    return r"\s+".join(re.escape(part) for part in value.split())
+    digits = re.sub(r"\D", "", value)
+    if len(digits) >= 7 and not re.search(r"[^\W\d_]", value):
+        # A phone number or booking code, however it is punctuated.
+        return r"\+?" + r"[\s().-]*".join(digits)
+    # Separators may change too: "Jane Doe" also appears as JaneDoe.py or jane_doe.
+    return r"[\s_.-]*".join(re.escape(part) for part in value.split())
 
 
 class Scrubber:
@@ -49,12 +56,13 @@ class Scrubber:
             return ""
         text = SYSTEM_TEXT.sub("", text)
         text = PASTED_TEXT.sub("[pasted text hidden]", text)
+        # Private phrases first: a generic rule could eat part of one and hide the rest from the match.
+        if self.private:
+            text = self.private.sub("[private]", text)
         for _, pattern, replacement in PATTERNS:
             text = pattern.sub(replacement, text)
         if self.names:
             text = self.names.sub("[name]", text)
-        if self.private:
-            text = self.private.sub("[private]", text)
         return text
 
     def scan(self, text: str) -> Counter:

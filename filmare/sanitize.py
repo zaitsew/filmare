@@ -17,12 +17,10 @@ from .scrub import Scrubber
 
 CODE_SUFFIXES = (".swift", ".ts", ".tsx", ".js", ".jsx", ".kt", ".py", ".sh", ".rs", ".go", ".css", ".sql", ".yml", ".yaml")
 PRIVATE_PATH = re.compile(r"(^|/)(data|fixtures|secrets?|memory)(/|$)|\.env|\.p8$|\.pem$|\.strings$|\.xcstrings$|\.json$")
-STATUS_LINE = re.compile(
-    r"\b(?:\d+ passed|\d+ failed|passed|succeeded|BUILD (?:SUCCEEDED|FAILED)|Test Suite|Executed \d+|merged|error:)"
-    r"|[✓✗✔✘]"
-)
+# Output is never copied. A status is rebuilt from these numbers and words, so a line of a private
+# file that happens to say "passed" cannot reach the video.
+STATUS = re.compile(r"(?<![\w.-])(\d+) (passed|failed)\b|\bBUILD (SUCCEEDED|FAILED)\b|\bExecuted (\d+) tests?\b")
 HIDDEN_CODE = "+[code hidden]"
-MAX_STATUS_LINES = 3
 
 
 @dataclass
@@ -42,6 +40,7 @@ class Sanitized:
                 found.append(node)
             elif isinstance(node, dict):
                 for key, value in node.items():
+                    found.append(str(key))  # a Codex edit is keyed by its file path
                     walk(value)
             elif isinstance(node, list):
                 for value in node:
@@ -64,11 +63,18 @@ def clip_text(text: str, limit: int) -> str:
     return (head[: stops[-1]] if stops else head.rsplit(" ", 1)[0]).rstrip() + " …"
 
 
-def status_of(output: str, scrub: Scrubber, ok: bool) -> str:
+def status_of(output: str, ok: bool) -> str:
     lines = output.splitlines()
-    kept = [scrub(line).strip()[:100] for line in lines if STATUS_LINE.search(line)]
-    if kept:
-        return "\n".join(kept[-MAX_STATUS_LINES:])
+    status: dict[str, str] = {}
+    for count, word, build, executed in STATUS.findall(output):
+        if word:
+            status[word] = f"{count} {word}"
+        elif build:
+            status["build"] = f"BUILD {build}"
+        else:
+            status["executed"] = f"{executed} tests"
+    if status:
+        return " · ".join(status.values())
     count = sum(1 for line in lines if line.strip())
     if count:
         return f"[{count} lines hidden]"
@@ -92,7 +98,7 @@ def clean_event(event: dict, scrub: Scrubber, config: Config) -> dict | None:
         return {"kind": kind, "at": at, "text": text} if text else None
     if kind == "shell":
         return {"kind": kind, "at": at, "ok": ok, "command": one_line(event["command"], scrub),
-                "output": status_of(event.get("output", ""), scrub, ok)}
+                "output": status_of(event.get("output", ""), ok)}
     if kind == "read":
         return {"kind": kind, "at": at, "ok": ok, "path": one_line(event["path"], scrub), "lines": int(event.get("lines") or 0)}
     if kind == "search":

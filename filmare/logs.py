@@ -54,6 +54,16 @@ def _harvest_text(text: str, session: Session) -> None:
         pass
 
 
+def _harvest_blocks(content, session: Session) -> None:
+    # Each block is its own JSON document, so joining them first would parse as nothing.
+    if isinstance(content, str):
+        _harvest_text(content, session)
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                _harvest_text(block.get("text", ""), session)
+
+
 def _block_text(content) -> str:
     if isinstance(content, str):
         return content
@@ -136,7 +146,7 @@ def _claude_result(event: dict, block: dict, result: dict, session: Session) -> 
         event["hunks"] = result["structuredPatch"]
     elif event["kind"] == "tool" and event["name"].startswith("mcp__"):
         # What a private tool returned is private, and the agent may quote it later.
-        _harvest_text(text, session)
+        _harvest_blocks(block.get("content"), session)
         harvest(event.get("input"), session.private, DEFAULT_KEYS)
 
 

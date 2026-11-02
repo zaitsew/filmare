@@ -6,7 +6,7 @@ from pathlib import Path
 
 from filmare.config import Config, add_private, harvest
 from filmare.logs import parse_session
-from filmare.sanitize import clip_text, sanitize_file, sanitize_session
+from filmare.sanitize import clip_text, sanitize_file, sanitize_session, status_of
 from filmare.scrub import Scrubber
 
 FAKE_TOKEN = "ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4"
@@ -83,6 +83,10 @@ class ScrubberTests(unittest.TestCase):
         ("Authorization: Bearer abcdef123456", "abcdef123456"),
         ("GH_TOKEN=abcdef123456", "abcdef123456"),
         ("--password hunter22", "hunter22"),
+        ("deploy --password 'hunter 22'", "hunter 22"),
+        ('API_KEY="hunter 22"', "hunter 22"),
+        ("Authorization: Basic YWxpY2U6aHVudGVyMg==", "YWxpY2U6aHVudGVyMg"),
+        ("curl -u alice:hunter22 x", "hunter22"),
         ("https://user:hunter22@example.org/x", "hunter22"),
         ("a@b.example.org", "a@b.example.org"),
         ("+34 612 345 678", "612 345 678"),
@@ -183,6 +187,56 @@ class SanitizeTests(unittest.TestCase):
         session = parse_session(claude_log())
         session.events = session.events[:1]
         self.assertIn("[name]", sanitize_session(session, CONFIG).jsonl)
+
+
+class ReviewFixTests(unittest.TestCase):
+    def test_generic_rules_do_not_break_a_private_phrase(self):
+        scrub = Scrubber(private={"Quentin Blueberry quentin@example.org"})
+        self.assertEqual(scrub("Quentin Blueberry quentin@example.org"), "[private]")
+
+    def test_a_masked_name_does_not_leave_its_email_domain(self):
+        scrub = Scrubber(["Zelda"], {"Quentin Blueberry"})
+        self.assertEqual(scrub("zelda@example.org"), "[email]")
+        self.assertEqual(scrub("quentin.blueberry@example.org"), "[email]")
+
+    def test_numeric_values_under_sensitive_keys_are_private(self):
+        found = set()
+        harvest({"phone": "612345678", "pnr": 123456, "from": "2026-11-01"}, found)
+        self.assertEqual(found, {"612345678", "123456"})
+        scrub = Scrubber(private=found)
+        self.assertEqual(scrub("Call 612345678"), "Call [private]")
+        self.assertEqual(scrub("Call 612-345-678"), "Call [private]")
+
+    def test_status_never_copies_a_line(self):
+        output = "Quentin Blueberry passed verification\nTests 3 passed (3)\nBUILD SUCCEEDED for Quentin"
+        self.assertEqual(status_of(output, True), "3 passed · BUILD SUCCEEDED")
+        self.assertEqual(status_of("Quentin passed\nfine", True), "[2 lines hidden]")
+        self.assertEqual(status_of("", False), "[failed]")
+
+    def test_scan_reads_dictionary_keys(self):
+        result = sanitize_file(codex_log(), CONFIG)
+        result.jsonl += json.dumps({"changes": {"QuentinBlueberry.py": {}}}) + "\n"
+        self.assertTrue(result.scan()["private"])
+
+    def test_separated_forms_of_a_phrase_are_masked(self):
+        scrub = Scrubber(private={"Quentin Blueberry"})
+        for form in ("QuentinBlueberry.py", "quentin_blueberry", "quentin-blueberry"):
+            self.assertNotIn("uentin", scrub(form), form)
+
+    def test_each_mcp_block_is_harvested(self):
+        def assistant(*blocks):
+            return {"type": "assistant", "timestamp": "t", "message": {"content": list(blocks)}}
+
+        log = write_lines([
+            assistant({"type": "tool_use", "id": "m", "name": "mcp__trips__get", "input": {}}),
+            {"type": "user", "timestamp": "t", "message": {"content": [{"type": "tool_result", "tool_use_id": "m", "content": [
+                {"type": "text", "text": json.dumps({"guest": "Quentin Blueberry"})},
+                {"type": "text", "text": json.dumps({"address": "Avenida Inventada 7"})},
+            ]}]}},
+            assistant({"type": "text", "text": "Quentin Blueberry is at Avenida Inventada 7."}),
+        ])
+        self.assertEqual(parse_session(log).private, {"Quentin Blueberry", "Avenida Inventada 7"})
+        self.assertNotIn("Quentin", sanitize_file(log, Config()).jsonl)
 
 
 class ClipTests(unittest.TestCase):
