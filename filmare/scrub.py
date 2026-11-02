@@ -33,6 +33,13 @@ SYSTEM_TEXT = re.compile(r"<system-reminder>[\s\S]*?</system-reminder>")
 PASTED_TEXT = re.compile(r"<pasted_content\b[^>]*>[\s\S]*?</pasted_content\b[^>]*>")
 
 
+def _mask_credentials(text: str) -> str:
+    for category, pattern, replacement in PATTERNS:
+        if category in CREDENTIALS:
+            text = pattern.sub(replacement, text)
+    return text
+
+
 def _phrase(value: str) -> str:
     digits = re.sub(r"\D", "", value)
     if len(digits) >= 4 and not re.search(r"[^\W\d_]", value):
@@ -45,7 +52,9 @@ def _phrase(value: str) -> str:
 class Scrubber:
     def __init__(self, names: list[str] | None = None, private: set[str] | None = None):
         self.names = re.compile("|".join(f"(?:{n})" for n in names), re.I) if names else None
-        values = sorted(private or (), key=len, reverse=True)
+        # Credentials are masked first, so a private string holding one must also match in its masked form.
+        values = set(private or ())
+        values = sorted(values | {_mask_credentials(v) for v in values}, key=len, reverse=True)
         self.private = (
             re.compile(r"(?<![^\W_])(?:" + "|".join(_phrase(v) for v in values) + r")(?![^\W_])", re.I) if values else None
         )
@@ -58,9 +67,7 @@ class Scrubber:
         text = SYSTEM_TEXT.sub("", text)
         text = PASTED_TEXT.sub("[pasted text hidden]", text)
         # Credentials first: a private string can equal a label such as API_KEY and hide its value.
-        for category, pattern, replacement in PATTERNS:
-            if category in CREDENTIALS:
-                text = pattern.sub(replacement, text)
+        text = _mask_credentials(text)
         # Then private phrases, before a broader rule can eat part of one and hide the rest.
         if self.private:
             text = self.private.sub("[private]", text)

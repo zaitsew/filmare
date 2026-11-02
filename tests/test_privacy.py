@@ -36,9 +36,12 @@ def claude_log() -> Path:
          "message": {"content": "Please fix the trip for Зельде, mail zelda@example.org"}},
         assistant({"type": "thinking", "thinking": "THINKING-MUST-NOT-APPEAR"}),
         assistant({"type": "tool_use", "id": "b1", "name": "Bash",
-                   "input": {"command": f"npm test && curl -H 'Authorization: Bearer abcdef123456' --token {FAKE_TOKEN} x\nsecond line"}}),
+                   "input": {"command": f"curl -H 'Authorization: Bearer abcdef123456' --token {FAKE_TOKEN} x\nsecond line"}}),
         user({"type": "tool_result", "tool_use_id": "b1", "content": SECRET_OUTPUT},
-             toolUseResult={"stdout": SECRET_OUTPUT + "\nTests 3 passed (3)"}),
+             toolUseResult={"stdout": SECRET_OUTPUT + "\nTests 9 passed (9)"}),
+        assistant({"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "cd web && npm test 2>&1 | tail -5"}}),
+        user({"type": "tool_result", "tool_use_id": "t1", "content": "Tests 3 passed (3)"},
+             toolUseResult={"stdout": "Tests 3 passed (3)"}),
         assistant({"type": "tool_use", "id": "b2", "name": "Bash", "input": {"command": "cat notes"}}),
         user({"type": "tool_result", "tool_use_id": "b2", "content": "just\nsome\nnotes"},
              toolUseResult={"stdout": "just\nsome\nnotes"}),
@@ -149,6 +152,7 @@ class SanitizeTests(unittest.TestCase):
         self.assertEqual(result.agent, "claude")
         self.assertIn('"cwd": "~/demo"', result.jsonl)
         self.assertIn("3 passed", result.jsonl)
+        self.assertNotIn("9 passed", result.jsonl)
         self.assertIn("[3 lines hidden]", result.jsonl)
         self.assertIn("[private]", result.jsonl)
         self.assertIn("[Image]", result.jsonl)
@@ -197,6 +201,10 @@ class ReviewFixTests(unittest.TestCase):
     def test_a_private_label_does_not_protect_its_value(self):
         self.assertNotIn("hunter22", Scrubber(private={"API_KEY"})("API_KEY=hunter22"))
 
+    def test_a_private_phrase_holding_a_credential_is_masked_whole(self):
+        scrub = Scrubber(private={"Quentin Blueberry API_KEY=hunter22"})
+        self.assertEqual(scrub("note: Quentin Blueberry API_KEY=hunter22"), "note: [private]")
+
     def test_underscored_file_names_are_masked(self):
         self.assertNotIn("uentin", Scrubber(private={"Quentin Blueberry"})("Quentin_Blueberry_test.py"))
 
@@ -224,6 +232,8 @@ class ReviewFixTests(unittest.TestCase):
         self.assertEqual(status_of("612345678 passed verification", True, "npm test"), "[1 lines hidden]")
         self.assertEqual(status_of("1234 passed verification", True, "cat data/clients.txt"), "[1 lines hidden]")
         self.assertEqual(status_of("1234 passed verification", True, "cat tests/clients.txt"), "[1 lines hidden]")
+        for command in ("npm test && cat data/clients.txt", "npm test; cat x", "npm test $(cat x)", "npm test | cat"):
+            self.assertEqual(status_of("1234 passed", True, command), "[1 lines hidden]", command)
         for command in ("./check.sh", "cd web && npx vitest run", "DEVELOPER_DIR=/x scripts/xcb test", "python3 -m unittest"):
             self.assertEqual(status_of("3 passed", True, command), "3 passed", command)
         self.assertEqual(status_of("", False), "[failed]")
