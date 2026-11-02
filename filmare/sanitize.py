@@ -22,11 +22,12 @@ PRIVATE_PATH = re.compile(r"(^|/)(data|fixtures|secrets?|memory)(/|$)|\.env|\.p8
 STATUS = re.compile(r"(?<![\w.-])(\d{1,5}) (passed|failed)\b|\bBUILD (SUCCEEDED|FAILED)\b|\bExecuted (\d{1,5}) tests?\b")
 # Only a test or build run reports a status. Every step of the command must be one of these, so
 # `cat clients.txt` or `npm test && cat clients.txt` cannot supply a number.
-RUNNER = re.compile(
-    r"(?:\w+=\S*\s+)*(?:npx\s+)?(?:\S*/)?"
-    r"(?:check\.sh|vitest|jest|pytest|xcodebuild|xcb|gradlew?|tsc|swift\s+(?:test|build)|cargo\s+(?:test|build|check)|deno\s+(?:test|check)"
-    r"|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test|python3?\s+-m\s+(?:unittest|pytest)|make\s+(?:test|check))(?![\w.-])"
-)
+RUNNERS = {"check.sh", "vitest", "jest", "pytest", "xcodebuild", "xcb", "tsc"}
+RUNNER_SUBCOMMANDS = {
+    "swift": {"test", "build"}, "cargo": {"test", "build", "check"}, "deno": {"test", "check"}, "make": {"test", "check"},
+    "npm": {"test"}, "pnpm": {"test"}, "yarn": {"test"}, "bun": {"test"},
+}
+GRADLE_TASK = re.compile(r"[\w:-]*(?:test|check|build|assemble)[\w:-]*", re.I)
 QUIET_STEP = re.compile(r"cd\s+\S+|(?:export|unset)\s+\S+|set\s+[-+]\w+(?:\s+\w+)?|(?:tail|head)(?:\s+-\w+(?:\s+\d+)?)*")
 HIDDEN_CODE = "+[code hidden]"
 
@@ -71,13 +72,35 @@ def clip_text(text: str, limit: int) -> str:
     return (head[: stops[-1]] if stops else head.rsplit(" ", 1)[0]).rstrip() + " …"
 
 
+def is_runner(step: str) -> bool:
+    words = step.split()
+    while words and re.fullmatch(r"\w+=\S*", words[0]):
+        words.pop(0)
+    if words[:1] == ["npx"]:
+        words.pop(0)
+    if not words:
+        return False
+    program, args = words[0].rsplit("/", 1)[-1], words[1:]
+    if program in RUNNERS:
+        return True
+    if program in ("npm", "pnpm", "yarn", "bun") and args[:1] == ["run"]:
+        args = args[1:]
+    if program in RUNNER_SUBCOMMANDS:
+        return args[:1] != [] and args[0] in RUNNER_SUBCOMMANDS[program]
+    if program in ("python", "python3"):
+        return args[:2] in (["-m", "unittest"], ["-m", "pytest"])
+    if program in ("gradle", "gradlew"):
+        return args[:1] != [] and bool(GRADLE_TASK.fullmatch(args[0]))
+    return False
+
+
 def reports_status(command: str) -> bool:
     # Only these plain characters count. Quoting, expansion, redirects and odd spaces all hide the status.
     plain = re.sub(r"(?<=[ \t])2>&1(?=[ \t\n]|$)", " ", command)
     if not re.fullmatch(r"[A-Za-z0-9_./=:@+,%~ \t\n;&|-]*", plain) or re.search(r"(?<!&)&(?!&)", plain):
         return False
     steps = [step.strip() for step in re.split(r"&&|\|\||[;|\n]", plain) if step.strip()]
-    return any(RUNNER.match(s) for s in steps) and all(RUNNER.match(s) or QUIET_STEP.fullmatch(s) for s in steps)
+    return any(is_runner(s) for s in steps) and all(is_runner(s) or QUIET_STEP.fullmatch(s) for s in steps)
 
 
 def status_of(output: str, ok: bool, command: str = "") -> str:
