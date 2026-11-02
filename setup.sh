@@ -19,7 +19,9 @@ if [ ! -d "$data/agent-replay/.git" ]; then
   git clone --quiet "$REPLAY_REPO" "$data/agent-replay"
 fi
 git -C "$data/agent-replay" fetch --quiet origin "$REPLAY_SHA"
-git -C "$data/agent-replay" checkout --quiet --detach "$REPLAY_SHA"
+# Force and clean: a pinned HEAD proves nothing about edited or added files.
+git -C "$data/agent-replay" checkout --quiet --force --detach "$REPLAY_SHA"
+git -C "$data/agent-replay" clean -fdq
 [ "$(git -C "$data/agent-replay" rev-parse HEAD)" = "$REPLAY_SHA" ] || { echo "Renderer is not at the pinned commit." >&2; exit 2; }
 # Our own lockfile: the renderer's cannot be parsed by this bun, which would then float every dependency.
 cp "$root/helpers/agent-replay.bun.lock" "$data/agent-replay/bun.lock"

@@ -12,7 +12,8 @@ from pathlib import Path
 from . import __version__
 from .config import DEFAULT_PATH, Config, ConfigError
 from .logs import parse_session
-from .render import (FORMATS, REPLAY_SHA, LeakFound, NotReady, data_dir, outline_of, render_clip, renderer_dir)
+from .render import (FORMATS, REPLAY_SHA, LeakFound, NotReady, check_text, data_dir, outline_of, render_clip,
+                     renderer_dir)
 from .sanitize import one_line, sanitize_file
 from .scrub import Scrubber
 
@@ -94,6 +95,7 @@ def _names_and_private():
 
 def cmd_outline(args) -> int:
     sanitized = sanitize_file(find_session(args.session), Config.load())
+    check_text(sanitized)
     with tempfile.TemporaryDirectory() as folder:
         print(outline_of(sanitized, Path(folder)))
     return 0

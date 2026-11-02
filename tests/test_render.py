@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from filmare import render
+from filmare import cli, render
 from filmare.config import Config
 from filmare.scrub import Scrubber
 
@@ -88,6 +88,20 @@ class GateTests(unittest.TestCase):
         self.assertIn("date unknown", render.label_text(""))
 
 
+class OutlineTests(unittest.TestCase):
+    def test_outline_runs_the_text_gate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            session = log_file(folder)
+            config = Config(names=["Zelda"])
+            leaky = mock.Mock(scan=lambda: {"private": 1})
+            with mock.patch.object(cli, "sanitize_file", lambda path, cfg: leaky), \
+                    mock.patch.object(cli.Config, "load", lambda: config), \
+                    mock.patch.object(cli, "outline_of") as outline, \
+                    mock.patch("sys.stderr"):
+                self.assertEqual(cli.main(["outline", str(session)]), 3)
+            outline.assert_not_called()
+
+
 class PipelineTests(unittest.TestCase):
     """Replaces the external tools and checks where the pipeline refuses."""
 
@@ -131,7 +145,8 @@ class PipelineTests(unittest.TestCase):
     def assert_nothing_left(self):
         self.assertFalse(self.out.exists())
         self.assertFalse(self.out.with_suffix(".sheet.png").exists())
-        self.assertEqual(list((self.root / "data/work").iterdir()), [])
+        work = self.root / "data/work"
+        self.assertEqual(list(work.iterdir()) if work.exists() else [], [])
 
     def test_a_clean_run_writes_the_clip_and_the_log(self):
         result = self.run_pipeline()
@@ -152,18 +167,19 @@ class PipelineTests(unittest.TestCase):
             self.run_pipeline()
         self.assert_nothing_left()
 
-    def test_a_private_title_blocks_the_output(self):
-        original = self.fake_replay
-
-        def echo_title(*args):
-            if args[0] != "outline" and "--json" in args:
-                self.layout["title"] = args[args.index("--title") + 1]
-            return original(*args)
-
-        with mock.patch.object(self, "fake_replay", echo_title):
-            with self.assertRaises(render.LeakFound):
-                self.run_pipeline(title="A trip with Zelda")
+    def test_a_private_title_never_reaches_the_renderer(self):
+        with mock.patch.object(render, "replay") as replay:
+            with self.assertRaises(render.LeakFound) as caught:
+                render.render_clip(log_file(str(self.root)), self.out, self.config, title="A trip with Zelda")
+        replay.assert_not_called()
+        self.assertEqual(caught.exception.gate, "options")
         self.assert_nothing_left()
+
+    def test_a_private_caption_never_reaches_the_renderer(self):
+        with mock.patch.object(render, "replay") as replay:
+            with self.assertRaises(render.LeakFound):
+                render.render_clip(log_file(str(self.root)), self.out, self.config, cuts=["1: Zelda asks"])
+        replay.assert_not_called()
 
     def test_an_empty_config_refuses_to_run(self):
         self.config = Config()

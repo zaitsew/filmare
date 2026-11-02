@@ -198,6 +198,13 @@ def check_text(sanitized: Sanitized) -> None:
         raise LeakFound("text", found)
 
 
+def check_options(title: str | None, cuts: list[str] | None, scrubber: Scrubber) -> None:
+    """What the user typed goes to the renderer unscrubbed, so it is checked before the renderer sees it."""
+    found = scrubber.scan("\n".join([title or "", *(cuts or [])]))
+    if found:
+        raise LeakFound("options", found)
+
+
 def check_layout(layout: dict, scrubber: Scrubber) -> None:
     found = scrubber.scan(layout_text(layout))
     if found:
@@ -250,6 +257,7 @@ def render_clip(
         raise NotReady("The config names nothing private, so a leak could not be recognised. Edit it first.")
     sanitized = sanitize_file(session, config)
     check_text(sanitized)
+    check_options(title, cuts, sanitized.scrubber)
     base = data_dir() / "work"
     base.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(dir=base))  # mkdtemp makes it private to this user
