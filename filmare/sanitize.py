@@ -19,7 +19,14 @@ CODE_SUFFIXES = (".swift", ".ts", ".tsx", ".js", ".jsx", ".kt", ".py", ".sh", ".
 PRIVATE_PATH = re.compile(r"(^|/)(data|fixtures|secrets?|memory)(/|$)|\.env|\.p8$|\.pem$|\.strings$|\.xcstrings$|\.json$")
 # Output is never copied. A status is rebuilt from these numbers and words, so a line of a private
 # file that happens to say "passed" cannot reach the video.
-STATUS = re.compile(r"(?<![\w.-])(\d+) (passed|failed)\b|\bBUILD (SUCCEEDED|FAILED)\b|\bExecuted (\d+) tests?\b")
+STATUS = re.compile(r"(?<![\w.-])(\d{1,5}) (passed|failed)\b|\bBUILD (SUCCEEDED|FAILED)\b|\bExecuted (\d{1,5}) tests?\b")
+# Only these commands report a status. `cat clients.txt` can print "1234 passed" too.
+# The program has to start the command, so `cat tests/clients.txt` does not count.
+REPORTS_STATUS = re.compile(
+    r"(?:^|&&|\|\||;|\n)\s*(?:\w+=\S*\s+)*(?:npx\s+)?(?:\S*/)?"
+    r"(?:check\.sh|vitest|jest|pytest|xcodebuild|xcb|gradlew?|cargo|deno|swift|tsc"
+    r"|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test|python3?\s+-m\s+(?:unittest|pytest)|make\s+(?:test|check))(?![\w.-])"
+)
 HIDDEN_CODE = "+[code hidden]"
 
 
@@ -63,10 +70,10 @@ def clip_text(text: str, limit: int) -> str:
     return (head[: stops[-1]] if stops else head.rsplit(" ", 1)[0]).rstrip() + " …"
 
 
-def status_of(output: str, ok: bool) -> str:
+def status_of(output: str, ok: bool, command: str = "") -> str:
     lines = output.splitlines()
     status: dict[str, str] = {}
-    for count, word, build, executed in STATUS.findall(output):
+    for count, word, build, executed in STATUS.findall(output) if REPORTS_STATUS.search(command) else ():
         if word:
             status[word] = f"{count} {word}"
         elif build:
@@ -98,7 +105,7 @@ def clean_event(event: dict, scrub: Scrubber, config: Config) -> dict | None:
         return {"kind": kind, "at": at, "text": text} if text else None
     if kind == "shell":
         return {"kind": kind, "at": at, "ok": ok, "command": one_line(event["command"], scrub),
-                "output": status_of(event.get("output", ""), ok)}
+                "output": status_of(event.get("output", ""), ok, event["command"])}
     if kind == "read":
         return {"kind": kind, "at": at, "ok": ok, "path": one_line(event["path"], scrub), "lines": int(event.get("lines") or 0)}
     if kind == "search":

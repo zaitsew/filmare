@@ -28,13 +28,14 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ("path", re.compile(r"(?:/private)?/(?:tmp|var/folders)/[^\s\"')]+"), "[tmp]"),
     ("path", re.compile(r"/Users/[^/\s\"')]+"), "~"),
 ]
+CREDENTIALS = frozenset({"key", "token", "credential"})
 SYSTEM_TEXT = re.compile(r"<system-reminder>[\s\S]*?</system-reminder>")
 PASTED_TEXT = re.compile(r"<pasted_content\b[^>]*>[\s\S]*?</pasted_content\b[^>]*>")
 
 
 def _phrase(value: str) -> str:
     digits = re.sub(r"\D", "", value)
-    if len(digits) >= 7 and not re.search(r"[^\W\d_]", value):
+    if len(digits) >= 4 and not re.search(r"[^\W\d_]", value):
         # A phone number or booking code, however it is punctuated.
         return r"\+?" + r"[\s().-]*".join(digits)
     # Separators may change too: "Jane Doe" also appears as JaneDoe.py or jane_doe.
@@ -46,7 +47,7 @@ class Scrubber:
         self.names = re.compile("|".join(f"(?:{n})" for n in names), re.I) if names else None
         values = sorted(private or (), key=len, reverse=True)
         self.private = (
-            re.compile(r"(?<!\w)(?:" + "|".join(_phrase(v) for v in values) + r")(?!\w)", re.I) if values else None
+            re.compile(r"(?<![^\W_])(?:" + "|".join(_phrase(v) for v in values) + r")(?![^\W_])", re.I) if values else None
         )
         # Wrapping can break a phrase inside a word, so the scan also compares with whitespace removed.
         self._squeezed = [s for s in (re.sub(r"\s+", "", v).lower() for v in values) if len(s) >= 8]
@@ -56,11 +57,16 @@ class Scrubber:
             return ""
         text = SYSTEM_TEXT.sub("", text)
         text = PASTED_TEXT.sub("[pasted text hidden]", text)
-        # Private phrases first: a generic rule could eat part of one and hide the rest from the match.
+        # Credentials first: a private string can equal a label such as API_KEY and hide its value.
+        for category, pattern, replacement in PATTERNS:
+            if category in CREDENTIALS:
+                text = pattern.sub(replacement, text)
+        # Then private phrases, before a broader rule can eat part of one and hide the rest.
         if self.private:
             text = self.private.sub("[private]", text)
-        for _, pattern, replacement in PATTERNS:
-            text = pattern.sub(replacement, text)
+        for category, pattern, replacement in PATTERNS:
+            if category not in CREDENTIALS:
+                text = pattern.sub(replacement, text)
         if self.names:
             text = self.names.sub("[name]", text)
         return text

@@ -36,7 +36,7 @@ def claude_log() -> Path:
          "message": {"content": "Please fix the trip for Зельде, mail zelda@example.org"}},
         assistant({"type": "thinking", "thinking": "THINKING-MUST-NOT-APPEAR"}),
         assistant({"type": "tool_use", "id": "b1", "name": "Bash",
-                   "input": {"command": f"curl -H 'Authorization: Bearer abcdef123456' --token {FAKE_TOKEN} x\nsecond line"}}),
+                   "input": {"command": f"npm test && curl -H 'Authorization: Bearer abcdef123456' --token {FAKE_TOKEN} x\nsecond line"}}),
         user({"type": "tool_result", "tool_use_id": "b1", "content": SECRET_OUTPUT},
              toolUseResult={"stdout": SECRET_OUTPUT + "\nTests 3 passed (3)"}),
         assistant({"type": "tool_use", "id": "b2", "name": "Bash", "input": {"command": "cat notes"}}),
@@ -194,6 +194,16 @@ class ReviewFixTests(unittest.TestCase):
         scrub = Scrubber(private={"Quentin Blueberry quentin@example.org"})
         self.assertEqual(scrub("Quentin Blueberry quentin@example.org"), "[private]")
 
+    def test_a_private_label_does_not_protect_its_value(self):
+        self.assertNotIn("hunter22", Scrubber(private={"API_KEY"})("API_KEY=hunter22"))
+
+    def test_underscored_file_names_are_masked(self):
+        self.assertNotIn("uentin", Scrubber(private={"Quentin Blueberry"})("Quentin_Blueberry_test.py"))
+
+    def test_short_numeric_codes_match_any_punctuation(self):
+        scrub = Scrubber(private={"123456"})
+        self.assertEqual(scrub("PNR 123-456"), "PNR [private]")
+
     def test_a_masked_name_does_not_leave_its_email_domain(self):
         scrub = Scrubber(["Zelda"], {"Quentin Blueberry"})
         self.assertEqual(scrub("zelda@example.org"), "[email]")
@@ -209,8 +219,13 @@ class ReviewFixTests(unittest.TestCase):
 
     def test_status_never_copies_a_line(self):
         output = "Quentin Blueberry passed verification\nTests 3 passed (3)\nBUILD SUCCEEDED for Quentin"
-        self.assertEqual(status_of(output, True), "3 passed · BUILD SUCCEEDED")
-        self.assertEqual(status_of("Quentin passed\nfine", True), "[2 lines hidden]")
+        self.assertEqual(status_of(output, True, "npm test"), "3 passed · BUILD SUCCEEDED")
+        self.assertEqual(status_of("Quentin passed\nfine", True, "npm test"), "[2 lines hidden]")
+        self.assertEqual(status_of("612345678 passed verification", True, "npm test"), "[1 lines hidden]")
+        self.assertEqual(status_of("1234 passed verification", True, "cat data/clients.txt"), "[1 lines hidden]")
+        self.assertEqual(status_of("1234 passed verification", True, "cat tests/clients.txt"), "[1 lines hidden]")
+        for command in ("./check.sh", "cd web && npx vitest run", "DEVELOPER_DIR=/x scripts/xcb test", "python3 -m unittest"):
+            self.assertEqual(status_of("3 passed", True, command), "3 passed", command)
         self.assertEqual(status_of("", False), "[failed]")
 
     def test_scan_reads_dictionary_keys(self):
