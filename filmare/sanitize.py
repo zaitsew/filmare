@@ -73,7 +73,7 @@ def clip_text(text: str, limit: int) -> str:
 
 def reports_status(command: str) -> bool:
     # Anything else the shell could act on hides the status, whatever it would have done.
-    plain = command.replace("2>&1", " ")
+    plain = re.sub(r"(?<=\s)2>&1(?=\s|$)", " ", command)
     if re.search(r"[$`<>()\\]|(?<!&)&(?!&)", plain):
         return False
     steps = [step.strip() for step in re.split(r"&&|\|\||[;|\n]", plain) if step.strip()]
