@@ -25,7 +25,8 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -4
 
 echo "== shellcheck"
 if command -v shellcheck >/dev/null; then
-  git ls-files -co --exclude-standard '*.sh' '.githooks/*' | xargs shellcheck || failed=1
+  # The leak gate file is Teyla's and is not a shell script.
+  git ls-files -co --exclude-standard '*.sh' '.githooks/*' bin/filmare | grep -v '\.teyla-leak-gate$' | xargs shellcheck || failed=1
 else
   echo "SKIPPED: shellcheck is not installed"
 fi
@@ -33,7 +34,7 @@ fi
 echo "== private data in tracked files"
 # This repo is public. Fixtures use invented data, and real names live in the user's config.
 if git ls-files -co --exclude-standard | grep -v '^check.sh$' \
-    | xargs grep -nIE '/Users/[a-z]*zaitsev|ceozaitsev|-----BEGIN [A-Z ]*PRIVATE KEY' 2>/dev/null; then
+    | xargs grep -nIE "$(id -un)|-----BEGIN [A-Z ]*PRIVATE KEY" 2>/dev/null; then
   echo "FAILED: the lines above must not be published"
   failed=1
 else

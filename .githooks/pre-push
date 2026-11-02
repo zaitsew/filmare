@@ -1,3 +1,80 @@
 #!/bin/sh
+# >>> teyla leak gate (pre-push) -- written by `teyla leak install`; `teyla leak install --uninstall` removes it
+_tlg_remote="${1:-origin}"
+_tlg_in=$(mktemp "${TMPDIR:-/tmp}/teyla-leak-gate.XXXXXX") || { echo "teyla leak gate: cannot create a temp file" >&2; exit 2; }
+_tlg_want=$(cat | tee "$_tlg_in" | wc -c)
+_tlg_got=$(wc -c < "$_tlg_in")
+if [ -z "$_tlg_want" ] || [ "$(( _tlg_want + 0 ))" -ne "$(( _tlg_got + 0 ))" ]; then
+  rm -f "$_tlg_in"
+  echo "teyla leak gate: could not read the pushed refs; not scanning a partial list" >&2
+  exit 2
+fi
+_tlg_rc=0
+if [ "${TEYLA_LEAK:-1}" = "0" ]; then
+  _tlg_home="${TEYLA_HOME:-$HOME/.teyla}"
+  { mkdir -p "$_tlg_home" && printf '%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")" "pre-push" >> "$_tlg_home/leak-skips.log"; } || {
+    echo "teyla leak gate: cannot record the skip in $_tlg_home/leak-skips.log; a skip that is not on record is not a skip" >&2
+    _tlg_rc=1
+  }
+elif ! command -v teyla >/dev/null 2>&1; then
+  echo "teyla leak gate: teyla not found; install it or set TEYLA_LEAK=0 for this command" >&2
+  _tlg_rc=2
+else
+  while read -r _tlg_l _tlg_lsha _tlg_r _tlg_rsha; do
+    case "$_tlg_lsha" in *[!0]*) ;; *) continue ;; esac
+    _tlg_range="$_tlg_lsha --not --remotes=$_tlg_remote"
+    case "$_tlg_rsha" in *[!0]*) git cat-file -e "$_tlg_rsha^{commit}" 2>/dev/null && _tlg_range="$_tlg_lsha --not $_tlg_rsha" ;; esac
+    teyla leak --commits "$_tlg_range" --quiet </dev/null >/dev/null 2>&1
+    _tlg_one=$?
+    if [ "$_tlg_one" -ne 0 ]; then
+      teyla leak --commits "$_tlg_range" </dev/null >&2
+      echo "teyla leak gate: pre-push refused (exit $_tlg_one); fix the findings, or set TEYLA_LEAK=0 for this command" >&2
+      [ "$_tlg_one" -gt "$_tlg_rc" ] && _tlg_rc=$_tlg_one
+    fi
+    case "$_tlg_l" in refs/tags/*)
+      _tlg_obj=$_tlg_lsha; _tlg_depth=0
+      while :; do
+        _tlg_type=$(git cat-file -t "$_tlg_obj" 2>/dev/null)
+        if [ -z "$_tlg_type" ]; then
+          echo "teyla leak gate: cannot read the tag chain of $_tlg_l; refusing the push" >&2
+          [ "$_tlg_rc" -lt 2 ] && _tlg_rc=2
+          break
+        fi
+        [ "$_tlg_type" = "tag" ] || break
+        _tlg_depth=$(( _tlg_depth + 1 ))
+        if [ "$_tlg_depth" -gt 20 ] || ! git cat-file -p "$_tlg_obj" > "$_tlg_in.tag" 2>/dev/null; then
+          echo "teyla leak gate: cannot read the tag chain of $_tlg_l; refusing the push" >&2
+          [ "$_tlg_rc" -lt 2 ] && _tlg_rc=2
+          break
+        fi
+        teyla leak --text "$_tlg_in.tag" --quiet </dev/null >/dev/null 2>&1
+        _tlg_one=$?
+        if [ "$_tlg_one" -ne 0 ]; then
+          teyla leak --text "$_tlg_in.tag" </dev/null >&2
+          echo "teyla leak gate: pre-push refused the annotated tag $_tlg_l (exit $_tlg_one); fix the findings, or set TEYLA_LEAK=0 for this command" >&2
+          [ "$_tlg_one" -gt "$_tlg_rc" ] && _tlg_rc=$_tlg_one
+        fi
+        _tlg_obj=$(sed -n '1s/^object //p' "$_tlg_in.tag")
+        rm -f "$_tlg_in.tag"
+        if [ -z "$_tlg_obj" ]; then
+          echo "teyla leak gate: cannot read the tag chain of $_tlg_l; refusing the push" >&2
+          [ "$_tlg_rc" -lt 2 ] && _tlg_rc=2
+          break
+        fi
+      done ;;
+    esac
+  done < "$_tlg_in"
+fi
+_tlg_legacy="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
+if [ "$_tlg_rc" -eq 0 ] && [ -z "${TEYLA_LEAK_CHAIN:-}" ] && [ -f "$_tlg_legacy" ] && [ -x "$_tlg_legacy" ] && ! [ "$_tlg_legacy" -ef "$0" ]; then
+  TEYLA_LEAK_CHAIN=1 "$_tlg_legacy" "$@" < "$_tlg_in" || _tlg_rc=$?
+fi
+if [ "$_tlg_rc" -ne 0 ]; then
+  rm -f "$_tlg_in"; exit "$_tlg_rc"
+fi
+exec < "$_tlg_in"
+rm -f "$_tlg_in"
+unset _tlg_home _tlg_rc _tlg_remote _tlg_in _tlg_want _tlg_got _tlg_l _tlg_lsha _tlg_r _tlg_rsha _tlg_range _tlg_one _tlg_legacy
+# <<< teyla leak gate
 # The laptop is the gate: nothing reaches GitHub until check.sh passes.
 exec "$(git rev-parse --show-toplevel)/check.sh"

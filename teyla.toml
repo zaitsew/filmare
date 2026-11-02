@@ -1,0 +1,19 @@
+[product]
+name = "filmare"
+
+[[check]]
+name = "Render a real session"
+how = "filmare list → filmare render <id> -o clip.mp4 → watch the clip and its contact sheet"
+status = "untested"
+
+[productize]
+primary = "macos"
+users = "owner"            # owner | family | testers | public
+target = "public"
+platforms = ["macos"]
+identity = "none"
+tenancy = "single"
+backend = "none"
+llm = "none"
+secrets = []
+cost_cap = "none"
