@@ -11,6 +11,10 @@ for tool in bun ffmpeg ffprobe git python3 xcrun; do
   command -v "$tool" >/dev/null || { echo "Missing: $tool. Install it, then run setup.sh again." >&2; exit 2; }
 done
 
+# filmare/logs.py imports compression.zstd, which exists from Python 3.14.
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 14))' \
+  || { echo "Python 3.14 or newer is required (python3 is $(python3 -V 2>&1)). Run: brew install python@3.14, then put it first on PATH." >&2; exit 2; }
+
 mkdir -p "$data/bin" "$data/home" "$data/work"
 chmod 700 "$data"
 
