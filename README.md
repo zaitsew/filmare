@@ -69,3 +69,5 @@ Rendering is done by [agent-replay](https://github.com/vkpdeveloper/agent-replay
 agent-replay is built on [Remotion](https://www.remotion.dev), which has its own licence: free for individuals and small teams, paid for larger companies. Check [its terms](https://www.remotion.dev/license) for your case.
 
 MIT licence.
+
+<!-- teyla:reviewed 2026-11-13 -->
