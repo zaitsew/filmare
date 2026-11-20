@@ -1,25 +1,15 @@
 <!-- Pictures: docs/readme/spec.json, drawn by readme-kit. Do not edit the SVGs by hand. -->
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.svg"><img src="docs/readme/hero-light.svg" alt="Filmare. Agent sessions as video. Nothing private leaves. Renders Claude Code and Codex logs as terminal clips, or refuses to export. Open source, free to run, macOS." width="100%"></picture>
 
-# Filmare
+**Your agents already write logs. Filmare cleans one and renders it as an animated terminal clip.**
 
-**Turn Claude Code and Codex sessions into short, watchable video, without leaking what was on your machine.**
-
-Filmare records nothing. Your agents already write logs. Filmare cleans a log, renders it as an animated terminal, and refuses to export the clip if it can still find anything private. It uses no AI and no API credits, and it costs nothing to run. It runs on macOS.
+Filmare records nothing. It refuses to export a clip if it can still find anything private. It uses no AI and no API credits, and it costs nothing to run. It runs on macOS and is in active development.
 
 [Quick start](#quick-start) · [Commands](#commands) · [Privacy model](#how-it-keeps-private-data-out) · [Limits](#what-it-cannot-promise) · [Credits](#credits)
 
 ## What it does
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/highlights-dark.svg"><img src="docs/readme/highlights-light.svg" alt="Six highlights. Formats: vertical, landscape or square clips. Masking: sanitized before render. Gates: three leak gates. Label: a replay label on every clip. Cuts: beats picked by rule. Review: a contact sheet beside each video." width="100%"></picture>
-
-- **Three formats.** `vertical` (default), `landscape` and `square` clips.
-- **Sanitized first.** Secrets, names and private files are masked before rendering.
-- **Fails closed.** Text, layout and OCR gates refuse a clip that still shows private data.
-- **Honest label.** Every clip says it is a reconstruction from logs.
-- **Rule-based cuts.** Or pick your own with `--cut`.
-- **Contact sheet.** Written beside the video, for your review.
-- **No AI, no credits.** Nothing is sent anywhere to be rendered.
 
 ## How it works
 
