@@ -1,8 +1,43 @@
+<!-- Pictures: docs/readme/spec.json, drawn by readme-kit. Do not edit the SVGs by hand. -->
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.svg"><img src="docs/readme/hero-light.svg" alt="Filmare. Agent sessions as video. Nothing private leaves. Renders Claude Code and Codex logs as terminal clips, or refuses to export. Open source, free to run, macOS." width="100%"></picture>
+
 # Filmare
 
-Turn Claude Code and Codex sessions into short, watchable video, without leaking what was on your machine.
+**Turn Claude Code and Codex sessions into short, watchable video, without leaking what was on your machine.**
 
-Filmare records nothing. Your agents already write logs. Filmare cleans a log, renders it as an animated terminal, and refuses to export the clip if it can still find anything private. It uses no AI and no API credits, and it costs nothing to run.
+Filmare records nothing. Your agents already write logs. Filmare cleans a log, renders it as an animated terminal, and refuses to export the clip if it can still find anything private. It uses no AI and no API credits, and it costs nothing to run. It runs on macOS.
+
+[Quick start](#quick-start) · [Commands](#commands) · [Privacy model](#how-it-keeps-private-data-out) · [Limits](#what-it-cannot-promise) · [Credits](#credits)
+
+## What it does
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/highlights-dark.svg"><img src="docs/readme/highlights-light.svg" alt="Six highlights. Formats: vertical, landscape or square clips. Masking: sanitized before render. Gates: three leak gates. Label: a replay label on every clip. Cuts: beats picked by rule. Review: a contact sheet beside each video." width="100%"></picture>
+
+- **Three formats.** `vertical` (default), `landscape` and `square` clips.
+- **Sanitized first.** Secrets, names and private files are masked before rendering.
+- **Fails closed.** Text, layout and OCR gates refuse a clip that still shows private data.
+- **Honest label.** Every clip says it is a reconstruction from logs.
+- **Rule-based cuts.** Or pick your own with `--cut`.
+- **Contact sheet.** Written beside the video, for your review.
+- **No AI, no credits.** Nothing is sent anywhere to be rendered.
+
+## How it works
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme/steps-dark.svg"><img src="docs/readme/steps-light.svg" alt="Five steps: read the log, sanitize, render, pass three gates, export the video and contact sheet." width="100%"></picture>
+
+```mermaid
+flowchart LR
+    A[Session log] --> B[Sanitizer]
+    B --> G1{Gate 1: text scan}
+    G1 --> R[Renderer]
+    R --> G2{Gate 2: layout scan}
+    G2 --> V[Video]
+    V --> G3{Gate 3: OCR, 1 frame per second}
+    G3 -->|clean| O[clip.mp4 + contact sheet]
+    G1 -.->|hit| X[Refused: exit 3]
+    G2 -.->|hit| X
+    G3 -.->|hit| X
+```
 
 ## Quick start
 
@@ -12,6 +47,14 @@ git clone https://github.com/zaitsew/filmare && cd filmare
 $EDITOR ~/.config/filmare/config.toml       # the names and files to keep out of videos
 filmare list                                # recent sessions
 filmare render <session-id> -o clip.mp4     # a short vertical clip, or a refusal
+```
+
+On success `render` prints three lines (the angle brackets are placeholders) and writes `clip.sheet.png`, a contact sheet, beside the video:
+
+```text
+<video>: <seconds> s, <beats> beats, speed <speed>.
+Both leak gates passed, <frames> frames read.
+Review it before publishing. Contact sheet: <sheet path>
 ```
 
 It runs on macOS and needs [Bun](https://bun.sh), `ffmpeg` and Python 3.14. `filmare doctor` says what is missing. The first render downloads Chrome Headless Shell, about 170 MB.
@@ -25,14 +68,19 @@ It runs on macOS and needs [Bun](https://bun.sh), `ffmpeg` and Python 3.14. `fil
 | `filmare outline <session>` | Numbers a session's steps, sanitized, so you can pick cuts |
 | `filmare render <session> -o clip.mp4` | Renders a clip, or refuses it |
 
-`render` options:
+| `render` option | Effect |
+|---|---|
+| `--format vertical\|landscape\|square` | Frame shape. Default `vertical` |
+| `--cut '4-9: Finds the bug'` | Choose a beat. Repeatable. Without it, rules pick the first request, steps with an outcome, and the last message |
+| `--duration 45` | Sets the speed to reach that length. Default is half speed |
+| `--title 'My title'` | Sets the title card |
 
-- `--format vertical\|landscape\|square`. The default is `vertical`.
-- `--cut '4-9: Finds the bug'`, repeatable. Without it, rules pick the beats: the first request, steps with an outcome, and the last message.
-- `--duration 45` sets the speed to reach that length. The default is half speed.
-- `--title 'My title'` sets the title card.
-
-Exit codes: 0 done, 1 failed, 2 not ready, 3 refused by a leak gate.
+| Exit code | Meaning |
+|---|---|
+| 0 | Done |
+| 1 | Failed |
+| 2 | Not ready |
+| 3 | Refused by a leak gate |
 
 ## How it keeps private data out
 
@@ -70,4 +118,12 @@ agent-replay is built on [Remotion](https://www.remotion.dev), which has its own
 
 MIT licence.
 
-<!-- teyla:reviewed 2026-11-13 -->
+## Docs
+
+| Document | What is in it |
+|---|---|
+| [`config.example.toml`](config.example.toml) | Every config key, with comments: names, deny files, `show_code`, `say_limit` |
+| [`AGENTS.md`](AGENTS.md) | Rules for agents working on this repo |
+| [`LICENSE`](LICENSE) | MIT licence text |
+
+<sub>Built by <a href="https://github.com/zaitsew">zaitsew</a> with a fleet of AI agents.</sub>

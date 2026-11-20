@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="284" viewBox="0 0 880 284" role="img" aria-label="Highlights. FORMATS: Vertical, landscape, square. Renders Claude Code and Codex logs as short clips. MASKING: Sanitized before render. Secrets, names, paths and tool output never reach the renderer. GATES: Three leak gates. Text, layout and on-device OCR must all pass, or no file. LABEL: Replay label on every clip. Burned in with the date: a reconstruction, not a recording. CUTS: Beats picked by rule. Or choose your own cuts with --cut. REVIEW: Contact sheet included. Watch every clip before you publish it.">
+<style>text{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,'Segoe UI',Helvetica,Arial,sans-serif;fill:#ECEDF2}.m{fill:#A2A7B5}.cap{font-size:11px;letter-spacing:.06em}.b{font-weight:600}</style>
+<rect x="0.5" y="0.5" width="879" height="283" rx="12" fill="#171A21" stroke="#2B2F3A"/>
+<rect x="20.0" y="20" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="38.0" y="39" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="52.0" y="48" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">FORMATS</text>
+<text class="b" x="38.0" y="74" font-size="16.5">Vertical, landscape, square</text>
+<text class="m" x="38.0" y="97" font-size="13.5">Renders Claude Code and Codex logs</text>
+<text class="m" x="38.0" y="116" font-size="13.5">as short clips.</text>
+<rect x="304.0" y="20" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="322.0" y="39" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="336.0" y="48" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">MASKING</text>
+<text class="b" x="322.0" y="74" font-size="16.5">Sanitized before render</text>
+<text class="m" x="322.0" y="97" font-size="13.5">Secrets, names, paths and tool output</text>
+<text class="m" x="322.0" y="116" font-size="13.5">never reach the renderer.</text>
+<rect x="588.0" y="20" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="606.0" y="39" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="620.0" y="48" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">GATES</text>
+<text class="b" x="606.0" y="74" font-size="16.5">Three leak gates</text>
+<text class="m" x="606.0" y="97" font-size="13.5">Text, layout and on-device OCR must</text>
+<text class="m" x="606.0" y="116" font-size="13.5">all pass, or no file.</text>
+<rect x="20.0" y="148" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="38.0" y="167" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="52.0" y="176" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">LABEL</text>
+<text class="b" x="38.0" y="202" font-size="16.5">Replay label on every clip</text>
+<text class="m" x="38.0" y="225" font-size="13.5">Burned in with the date: a</text>
+<text class="m" x="38.0" y="244" font-size="13.5">reconstruction, not a recording.</text>
+<rect x="304.0" y="148" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="322.0" y="167" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="336.0" y="176" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">CUTS</text>
+<text class="b" x="322.0" y="202" font-size="16.5">Beats picked by rule</text>
+<text class="m" x="322.0" y="225" font-size="13.5">Or choose your own cuts with --cut.</text>
+<rect x="588.0" y="148" width="272.0" height="116" rx="10" fill="#1D2029"/>
+<rect x="606.0" y="167" width="8" height="8" rx="2.5" fill="#9AA7F2"/>
+<text class="cap b" x="620.0" y="176" font-size="12" style="fill:#9AA7F2;letter-spacing:.07em">REVIEW</text>
+<text class="b" x="606.0" y="202" font-size="16.5">Contact sheet included</text>
+<text class="m" x="606.0" y="225" font-size="13.5">Watch every clip before you publish it.</text>
+</svg>
