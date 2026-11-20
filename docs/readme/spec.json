@@ -1,0 +1,68 @@
+{
+  "name": "Filmare",
+  "tagline": "Agent sessions as video. Nothing private leaves.",
+  "summary": "Renders Claude Code and Codex logs as terminal clips, or refuses to export.",
+  "status": "building",
+  "kind": "cli",
+  "platforms": [
+    "macOS"
+  ],
+  "pills": [
+    "Open source",
+    "Free to run"
+  ],
+  "highlights": [
+    {
+      "label": "FORMATS",
+      "title": "Vertical, landscape, square",
+      "text": "Renders Claude Code and Codex logs as short clips."
+    },
+    {
+      "label": "MASKING",
+      "title": "Sanitized before render",
+      "text": "Secrets, names, paths and tool output never reach the renderer."
+    },
+    {
+      "label": "GATES",
+      "title": "Three leak gates",
+      "text": "Text, layout and on-device OCR must all pass, or no file."
+    },
+    {
+      "label": "LABEL",
+      "title": "Replay label on every clip",
+      "text": "Burned in with the date: a reconstruction, not a recording."
+    },
+    {
+      "label": "CUTS",
+      "title": "Beats picked by rule",
+      "text": "Or choose your own cuts with --cut."
+    },
+    {
+      "label": "REVIEW",
+      "title": "Contact sheet included",
+      "text": "Watch every clip before you publish it."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Read the log",
+      "text": "Your agent already wrote it."
+    },
+    {
+      "title": "Sanitize",
+      "text": "Copy only what is known safe."
+    },
+    {
+      "title": "Render",
+      "text": "An animated terminal clip."
+    },
+    {
+      "title": "Pass 3 gates",
+      "text": "Text, layout, then OCR."
+    },
+    {
+      "title": "Export",
+      "text": "Video plus contact sheet."
+    }
+  ]
+}
