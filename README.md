@@ -116,4 +116,6 @@ MIT licence.
 | [`AGENTS.md`](AGENTS.md) | Rules for agents working on this repo |
 | [`LICENSE`](LICENSE) | MIT licence text |
 
+<sub>Be kind, rewind: watch the contact sheet before you publish.</sub>
+
 <sub>Built by <a href="https://github.com/zaitsew">zaitsew</a> with a fleet of AI agents.</sub>
