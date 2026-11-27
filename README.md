@@ -116,6 +116,23 @@ MIT licence.
 | [`AGENTS.md`](AGENTS.md) | Rules for agents working on this repo |
 | [`LICENSE`](LICENSE) | MIT licence text |
 
-<sub>Be kind, rewind: watch the contact sheet before you publish.</sub>
+<details>
+<summary>▢</summary>
+
+```text
+┌──────────┬──────────┬──────────┐
+│ 00:03    │ 00:11    │ 00:19    │
+│ $ codex  │ edit     │ 41 pass  │
+│          │ ████.env │          │
+├──────────┼──────────┼──────────┤
+│ 00:27    │ 00:34    │ 00:41    │
+│ git push │ [photo:  │ /Users/█ │
+│          │ a hare]  │ REFUSED  │
+└──────────┴──────────┴──────────┘
+```
+
+Frame 5 passed: a photo of a hare is not private data. Frame 6 slipped past the masks: a home folder named after the author, whose surname is Russian for hare. OCR caught it, and the whole clip was refused.
+
+</details>
 
 <sub>Built by <a href="https://github.com/zaitsew">zaitsew</a> with a fleet of AI agents.</sub>
